@@ -33,9 +33,9 @@
    - 在仓库根目录添加 `vercel.json`：
      ```json
 {
-  "rewrites": [
-    { "source": "/", "destination": "https://rzcxajxkjfynnvwp7cyb6f.streamlit.app/" },
-    { "source": "/(.*)", "destination": "https://rzcxajxkjfynnvwp7cyb6f.streamlit.app/$1" }
+  "redirects": [
+    { "source": "/", "destination": "https://rzcxajxkjfynnvwp7cyb6f.streamlit.app/", "permanent": false },
+    { "source": "/(.*)", "destination": "https://rzcxajxkjfynnvwp7cyb6f.streamlit.app/$1", "permanent": false }
   ]
 }
 ```
