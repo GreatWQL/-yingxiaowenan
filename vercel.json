@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "https://YOUR_STREAMLIT_HOST/" },
+    { "source": "/(.*)", "destination": "https://YOUR_STREAMLIT_HOST/$1" }
+  ]
+}
