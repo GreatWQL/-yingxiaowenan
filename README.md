@@ -34,8 +34,8 @@
      ```json
 {
   "rewrites": [
-    { "source": "/", "destination": "https://greatwql--yingxiaowenan.streamlit.app/" },
-    { "source": "/(.*)", "destination": "https://greatwql--yingxiaowenan.streamlit.app/$1" }
+    { "source": "/", "destination": "https://rzcxajxkjfynnvwp7cyb6f.streamlit.app/" },
+    { "source": "/(.*)", "destination": "https://rzcxajxkjfynnvwp7cyb6f.streamlit.app/$1" }
   ]
 }
 ```
