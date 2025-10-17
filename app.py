@@ -127,12 +127,8 @@ def run_replicate_model(model_slug: str, input_payload: dict):
     if not token:
         raise RuntimeError("缺少 REPLICATE_API_TOKEN")
     client = replicate.Client(api_token=token)
-    model = client.models.get(model_slug)
-    versions = list(model.versions.list())
-    version = versions[0] if versions else None
-    if version is None:
-        raise RuntimeError("无法获取模型版本")
-    return client.run(version, input=input_payload)
+    # 直接使用最新版本，避免版本枚举兼容性问题
+    return client.run(f"{model_slug}:latest", input=input_payload)
 
 
 def make_placeholder_image(text: str, width: int = 1024, height: int = 1024, bg=(245, 245, 245)):
