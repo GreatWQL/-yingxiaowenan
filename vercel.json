@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/", "destination": "https://YOUR_STREAMLIT_HOST/" },
-    { "source": "/(.*)", "destination": "https://YOUR_STREAMLIT_HOST/$1" }
+    { "source": "/", "destination": "https://greatwql--yingxiaowenan.streamlit.app/" },
+    { "source": "/(.*)", "destination": "https://greatwql--yingxiaowenan.streamlit.app/$1" }
   ]
 }

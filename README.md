@@ -32,13 +32,13 @@
 1) 反向代理（推荐）
    - 在仓库根目录添加 `vercel.json`：
      ```json
-     {
-       "rewrites": [
-         { "source": "/", "destination": "https://YOUR_STREAMLIT_HOST/" },
-         { "source": "/(.*)", "destination": "https://YOUR_STREAMLIT_HOST/$1" }
-       ]
-     }
-     ```
+{
+  "rewrites": [
+    { "source": "/", "destination": "https://greatwql--yingxiaowenan.streamlit.app/" },
+    { "source": "/(.*)", "destination": "https://greatwql--yingxiaowenan.streamlit.app/$1" }
+  ]
+}
+```
    - 将 `YOUR_STREAMLIT_HOST` 替换为你在 Spaces/Streamlit Cloud 的公开链接（不带路径）。
    - Vercel 不需要配置 API Key，密钥仍保留在实际运行平台（Spaces/Streamlit Cloud）。
    - 若选择此方式，请不要保留 `public/index.html`，否则根路径会优先返回静态文件而不是代理到外部主机。
