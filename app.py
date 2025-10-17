@@ -3,6 +3,10 @@ import re
 from pathlib import Path
 import streamlit as st
 from openai import OpenAI
+import io
+import urllib.request
+from PIL import Image, ImageDraw, ImageFont
+import replicate
 
 # ------------------------
 # 配置
@@ -101,6 +105,77 @@ def sanitize_banned_words(text: str, banned_words: list[str]) -> str:
     return text
 
 # ------------------------
+# 生成扩展：Replicate/占位模式
+# ------------------------
+
+def ensure_replicate_token() -> str:
+    token = os.environ.get("REPLICATE_API_TOKEN")
+    if not token:
+        try:
+            token = st.secrets.get("REPLICATE_API_TOKEN") or st.secrets.get("replicate", {}).get("api_token")
+        except Exception:
+            token = None
+    if token:
+        os.environ["REPLICATE_API_TOKEN"] = token
+    else:
+        st.sidebar.info("未检测到 REPLICATE_API_TOKEN（环境变量或Secrets）。可使用演示模式生成占位图片/视频。")
+    return token
+
+
+def run_replicate_model(model_slug: str, input_payload: dict):
+    token = ensure_replicate_token()
+    if not token:
+        raise RuntimeError("缺少 REPLICATE_API_TOKEN")
+    client = replicate.Client(api_token=token)
+    model = client.models.get(model_slug)
+    versions = list(model.versions.list())
+    version = versions[0] if versions else None
+    if version is None:
+        raise RuntimeError("无法获取模型版本")
+    return client.run(version, input=input_payload)
+
+
+def make_placeholder_image(text: str, width: int = 1024, height: int = 1024, bg=(245, 245, 245)):
+    img = Image.new("RGB", (width, height), color=bg)
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.load_default()
+    # 简单换行布局
+    words = text.split()
+    lines, line = [], ""
+    for w in words:
+        test = (line + " " + w).strip()
+        if draw.textlength(test, font=font) < width - 40:
+            line = test
+        else:
+            if line:
+                lines.append(line)
+            line = w
+    if line:
+        lines.append(line)
+    y = 50
+    for ln in lines[:25]:
+        draw.text((20, y), ln, fill=(20, 20, 20), font=font)
+        y += 20
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    buf.seek(0)
+    return buf
+
+
+def make_placeholder_gif(text: str, frames: int = 24, width: int = 640, height: int = 360):
+    images = []
+    font = ImageFont.load_default()
+    for i in range(frames):
+        img = Image.new("RGB", (width, height), color=(255, 255, 255))
+        draw = ImageDraw.Draw(img)
+        draw.rectangle([(10, 10), (width - 10, height - 10)], outline=(0, 0, 0), width=2)
+        draw.text((20 + i * 5, height // 2 - 10), text[:200], fill=(0, 0, 0), font=font)
+        images.append(img)
+    buf = io.BytesIO()
+    images[0].save(buf, format="GIF", save_all=True, append_images=images[1:], duration=80, loop=0)
+    buf.seek(0)
+    return buf
+
 # UI
 # ------------------------
 st.set_page_config(page_title=APP_TITLE, layout="wide")
@@ -207,6 +282,86 @@ if gen:
         file_name="marketing_copy.txt",
         mime="text/plain",
     )
+
+# ------------------------
+# 图片生成（Replicate + 演示模式）
+# ------------------------
+st.subheader("图片生成（Beta）")
+col_img_a, col_img_b, col_img_c = st.columns([2, 1, 1])
+with col_img_a:
+    img_prompt = st.text_input("图片提示词（中文/英文均可）", "儿童英语拼读课堂，温暖、亲和、明亮")
+with col_img_b:
+    img_w = st.selectbox("宽度", [512, 768, 1024], index=2)
+with col_img_c:
+    img_h = st.selectbox("高度", [512, 768, 1024], index=2)
+col_img_d, col_img_e = st.columns([1, 1])
+with col_img_d:
+    img_n = st.slider("数量", 1, 4, 2)
+with col_img_e:
+    img_demo = st.checkbox("演示模式（无API）", value=False, help="无密钥时生成占位图")
+img_model_slug = st.text_input("模型（Replicate slug）", "stability-ai/stable-diffusion-xl")
+btn_img = st.button("生成图片", type="primary")
+
+if btn_img:
+    try:
+        if img_demo:
+            st.info("演示模式：生成占位图片")
+            for i in range(img_n):
+                buf = make_placeholder_image(f"{img_prompt} #{i+1}", width=img_w, height=img_h)
+                st.image(buf, caption=f"占位图 {i+1}")
+                st.download_button(f"下载占位图 {i+1}", data=buf.getvalue(), file_name=f"placeholder_{i+1}.png", mime="image/png")
+        else:
+            outputs = run_replicate_model(img_model_slug, {
+                "prompt": img_prompt,
+                "num_outputs": img_n,
+                "width": img_w,
+                "height": img_h,
+            })
+            # outputs 可能是生成器或列表
+            urls = list(outputs) if not isinstance(outputs, list) else outputs
+            if not urls:
+                st.warning("未返回图片URL，请更换模型或稍后重试。")
+            for i, url in enumerate(urls, start=1):
+                st.image(url, caption=f"生成图 {i}")
+                try:
+                    data = urllib.request.urlopen(url).read()
+                    st.download_button(f"下载图片 {i}", data=data, file_name=f"image_{i}.png", mime="image/png")
+                except Exception:
+                    st.markdown(f"[打开原图 {i}]({url})")
+    except Exception as e:
+        st.error(f"图片生成失败：{e}")
+
+# ------------------------
+# 视频生成（Replicate + 演示模式）
+# ------------------------
+st.subheader("视频生成（Beta）")
+vid_prompt = st.text_input("视频提示词（简述画面/风格/动作）", "教室里孩子跟读Phonics，镜头推拉，温暖氛围")
+vid_seconds = st.slider("时长（秒）", 2, 8, 4)
+vid_model_slug = st.text_input("模型（Replicate slug）", "stability-ai/stable-video-diffusion")
+vid_demo = st.checkbox("演示模式（无API）", value=True, help="默认使用GIF演示")
+btn_vid = st.button("生成视频", type="primary")
+
+if btn_vid:
+    try:
+        if vid_demo:
+            st.info("演示模式：生成GIF占位短视频")
+            gif_buf = make_placeholder_gif(vid_prompt, frames=max(12, vid_seconds * 6))
+            st.image(gif_buf, caption="占位视频（GIF）", use_column_width=True)
+            st.download_button("下载GIF", data=gif_buf.getvalue(), file_name="demo.gif", mime="image/gif")
+        else:
+            outputs = run_replicate_model(vid_model_slug, {
+                "prompt": vid_prompt,
+                "duration": vid_seconds,
+            })
+            urls = list(outputs) if not isinstance(outputs, list) else outputs
+            if not urls:
+                st.warning("未返回视频URL，请更换模型或稍后重试。")
+            else:
+                vid_url = urls[-1]
+                st.video(vid_url)
+                st.markdown(f"[下载视频]({vid_url})")
+    except Exception as e:
+        st.error(f"视频生成失败：{e}")
 
 st.markdown("---")
 st.caption("合规提醒：学习效果因人而异，需持续投入；本工具输出仅作参考文案，最终发布前请再次人工审核。")

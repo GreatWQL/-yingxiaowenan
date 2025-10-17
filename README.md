@@ -50,3 +50,9 @@
 ## 常见问题
 - 看不到“生成”：检查所选提供商对应的 API Key 是否已在运行平台配置（Vercel 仅代理或嵌入，无需密钥）。
 - 生成失败：在运行平台检查日志；或切换提供商、降低温度稍后重试。
+
+## 图片/视频生成
+- 依赖 `REPLICATE_API_TOKEN` 用于真实生成；在运行平台 Secrets 配置：`REPLICATE_API_TOKEN=sk-xxxx`。
+- 页面提供模型 slug 输入（示例：图片 `stability-ai/stable-diffusion-xl`，视频 `stability-ai/stable-video-diffusion`）。如遇失败，可更换模型或稍后重试。
+- 无密钥可勾选“演示模式”，生成占位图片（PNG）或占位短视频（GIF），用于流程展示。
+- 生成的资源支持下载；若返回外链 URL，可点击“打开原图/下载视频”。
